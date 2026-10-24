@@ -350,6 +350,8 @@ alternative_else_nop_endif
 3:
 	apply_ssbd 0, 5f, x0, x1
 5:
+	/* apply_ssbd may change NZCV; KPTI still needs the saved task mode. */
+	tst	x22, #PSR_MODE32_BIT
 	.endif
 
 	msr	elr_el1, x21			// set up the return data
