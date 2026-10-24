@@ -1,3 +1,27 @@
+# Toolchain identification for VINTF. This tree predates Kconfig shell
+# expressions, so Kbuild supplies probe results through tracked environment
+# symbols. Keep the public booleans derived, never user-selectable.
+config TOOLCHAIN_CC_IS_CLANG
+	string
+	option env="KCONFIG_CC_IS_CLANG"
+
+config CC_IS_CLANG
+	def_bool TOOLCHAIN_CC_IS_CLANG = "y"
+
+config TOOLCHAIN_AS_IS_LLVM
+	string
+	option env="KCONFIG_AS_IS_LLVM"
+
+config AS_IS_LLVM
+	def_bool TOOLCHAIN_AS_IS_LLVM = "y"
+
+config TOOLCHAIN_LD_IS_LLD
+	string
+	option env="KCONFIG_LD_IS_LLD"
+
+config LD_IS_LLD
+	def_bool TOOLCHAIN_LD_IS_LLD = "y"
+
 config ARCH
 	string
 	option env="ARCH"
