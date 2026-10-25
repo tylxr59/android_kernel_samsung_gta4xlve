@@ -40,4 +40,13 @@ config DEBUG_DMA_BUF_REF
 	  matching the get/put call stacks.  This feature consumes extra memory
 	  in order to save the stack traces using STACKDEPOT.
 
+config DMABUF_BPF_ITER
+	bool "DMA-BUF BPF iterator"
+	depends on DMA_SHARED_BUFFER && BPF_SYSCALL && DEBUG_INFO_BTF
+	default n
+	help
+	  Expose the global DMA-BUF list to a privileged BPF iterator for
+	  accurate per-buffer accounting. No per-allocation sysfs objects
+	  are created. The iterator holds references only while reading.
+
 endmenu

@@ -66,6 +66,44 @@ struct dma_proc {
 
 static struct dma_buf_list db_list;
 
+#ifdef CONFIG_DMABUF_BPF_ITER
+/* Hold a file reference while a BPF iterator reads each global-list entry. */
+struct dma_buf *dma_buf_iter_begin(void)
+{
+	struct dma_buf *buf, *ret = NULL;
+
+	mutex_lock(&db_list.lock);
+	list_for_each_entry(buf, &db_list.head, list_node) {
+		if (get_file_rcu(buf->file)) {
+			dma_buf_ref_mod(buf, 1);
+			ret = buf;
+			break;
+		}
+	}
+	mutex_unlock(&db_list.lock);
+	return ret;
+}
+
+struct dma_buf *dma_buf_iter_next(struct dma_buf *buf)
+{
+	struct dma_buf *next = buf, *ret = NULL;
+
+	/* buf stays alive until traversal is finished and the list is unlocked. */
+	mutex_lock(&db_list.lock);
+	list_for_each_entry_continue(next, &db_list.head, list_node) {
+		if (get_file_rcu(next->file)) {
+			dma_buf_ref_mod(next, 1);
+			ret = next;
+			break;
+		}
+	}
+	mutex_unlock(&db_list.lock);
+	/* fput may schedule release; never rely on deferred release under the lock. */
+	dma_buf_put(buf);
+	return ret;
+}
+#endif
+
 static void dmabuf_dent_put(struct dma_buf *dmabuf)
 {
 	if (atomic_dec_and_test(&dmabuf->dent_count)) {

@@ -519,6 +519,12 @@ struct dma_buf *dma_buf_export(const struct dma_buf_export_info *exp_info);
 int dma_buf_fd(struct dma_buf *dmabuf, int flags);
 struct dma_buf *dma_buf_get(int fd);
 void dma_buf_put(struct dma_buf *dmabuf);
+#ifdef CONFIG_DMABUF_BPF_ITER
+struct dma_buf *dma_buf_iter_begin(void);
+/* Consumes the input reference and returns a new reference, or NULL. */
+struct dma_buf *dma_buf_iter_next(struct dma_buf *dmabuf);
+#endif
+
 
 struct sg_table *dma_buf_map_attachment(struct dma_buf_attachment *,
 					enum dma_data_direction);
