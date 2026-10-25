@@ -690,7 +690,9 @@ emit_clear:
 		 * BPF_STX XADD (atomic_add)
 		 */
 		/* *(u32 *)(dst + off) += src */
-		case BPF_STX | BPF_XADD | BPF_W:
+		case BPF_STX | BPF_ATOMIC | BPF_W:
+			if (insn->imm != BPF_ADD)
+				return -EINVAL;
 			/* Get EA into TMP_REG_1 */
 			PPC_ADDI(b2p[TMP_REG_1], dst_reg, off);
 			tmp_idx = ctx->idx * 4;
@@ -704,7 +706,9 @@ emit_clear:
 			PPC_BCC_SHORT(COND_NE, tmp_idx);
 			break;
 		/* *(u64 *)(dst + off) += src */
-		case BPF_STX | BPF_XADD | BPF_DW:
+		case BPF_STX | BPF_ATOMIC | BPF_DW:
+			if (insn->imm != BPF_ADD)
+				return -EINVAL;
 			PPC_ADDI(b2p[TMP_REG_1], dst_reg, off);
 			tmp_idx = ctx->idx * 4;
 			PPC_BPF_LDARX(b2p[TMP_REG_2], 0, b2p[TMP_REG_1], 0);

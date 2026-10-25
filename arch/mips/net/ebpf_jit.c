@@ -1504,8 +1504,8 @@ ld_skb_common:
 	case BPF_STX | BPF_H | BPF_MEM:
 	case BPF_STX | BPF_W | BPF_MEM:
 	case BPF_STX | BPF_DW | BPF_MEM:
-	case BPF_STX | BPF_W | BPF_XADD:
-	case BPF_STX | BPF_DW | BPF_XADD:
+	case BPF_STX | BPF_W | BPF_ATOMIC:
+	case BPF_STX | BPF_DW | BPF_ATOMIC:
 		if (insn->dst_reg == BPF_REG_10) {
 			ctx->flags |= EBPF_SEEN_FP;
 			dst = MIPS_R_SP;
@@ -1519,7 +1519,9 @@ ld_skb_common:
 		src = ebpf_to_mips_reg(ctx, insn, src_reg_no_fp);
 		if (src < 0)
 			return src;
-		if (BPF_MODE(insn->code) == BPF_XADD) {
+		if (BPF_MODE(insn->code) == BPF_ATOMIC) {
+			if (insn->imm != BPF_ADD)
+				return -EINVAL;
 			switch (BPF_SIZE(insn->code)) {
 			case BPF_W:
 				if (get_reg_val_type(ctx, this_idx, insn->src_reg) == REG_32BIT) {

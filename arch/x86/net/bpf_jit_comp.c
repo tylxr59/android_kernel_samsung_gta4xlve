@@ -1342,14 +1342,18 @@ st:			if (is_imm8(insn->off))
 			break;
 
 			/* STX XADD: lock *(u32*)(dst_reg + off) += src_reg */
-		case BPF_STX | BPF_XADD | BPF_W:
+		case BPF_STX | BPF_ATOMIC | BPF_W:
+			if (insn->imm != BPF_ADD)
+				return -EINVAL;
 			/* Emit 'lock add dword ptr [rax + off], eax' */
 			if (is_ereg(dst_reg) || is_ereg(src_reg))
 				EMIT3(0xF0, add_2mod(0x40, dst_reg, src_reg), 0x01);
 			else
 				EMIT2(0xF0, 0x01);
 			goto xadd;
-		case BPF_STX | BPF_XADD | BPF_DW:
+		case BPF_STX | BPF_ATOMIC | BPF_DW:
+			if (insn->imm != BPF_ADD)
+				return -EINVAL;
 			EMIT3(0xF0, add_2mod(0x48, dst_reg, src_reg), 0x01);
 xadd:			if (is_imm8(insn->off))
 				EMIT2(add_2reg(0x40, dst_reg, src_reg), insn->off);
