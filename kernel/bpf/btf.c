@@ -3805,12 +3805,15 @@ static int btf_check_all_metas(struct btf_verifier_env *env)
 	while (cur < end) {
 		struct btf_type *t = cur;
 		s32 meta_size;
+		int err;
 
 		meta_size = btf_check_meta(env, t, end - cur);
 		if (meta_size < 0)
 			return meta_size;
 
-		btf_add_type(env, t);
+		err = btf_add_type(env, t);
+		if (err)
+			return err;
 		cur += meta_size;
 		env->log_type_id++;
 	}
