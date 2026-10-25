@@ -2331,6 +2331,15 @@ bool __weak bpf_helper_changes_pkt_data(void *func)
  * analysis code and wants explicit zero extension inserted by verifier.
  * Otherwise, return FALSE.
  */
+u64 __weak bpf_arch_uaddress_limit(void)
+{
+#if defined(CONFIG_64BIT) && defined(CONFIG_ARCH_HAS_NON_OVERLAPPING_ADDRESS_SPACE)
+	return TASK_SIZE;
+#else
+	return 0;
+#endif
+}
+
 bool __weak bpf_jit_needs_zext(void)
 {
 	return false;

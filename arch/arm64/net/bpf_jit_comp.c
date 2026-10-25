@@ -1125,3 +1125,9 @@ bool arch_bpf_jit_check_func(const struct bpf_prog *prog)
 		IS_ALIGNED(func, sizeof(u32)));
 }
 #endif
+
+/* Use the full EL0 range even when a compat task loads the BPF program. */
+u64 bpf_arch_uaddress_limit(void)
+{
+	return TASK_SIZE_64;
+}
