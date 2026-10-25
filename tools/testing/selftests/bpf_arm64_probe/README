@@ -1,0 +1,20 @@
+Host-only ARM64 BPF probe logic checks
+======================================
+
+Run with TEST_OUTPUT pointing outside the kernel source tree:
+  TEST_OUTPUT=/absolute/output python3 tools/testing/selftests/bpf_arm64_probe/run-host.py
+
+Requires a 64-bit native host, GCC, AddressSanitizer and UndefinedBehaviorSanitizer.
+No root or tablet access is used. The runner extracts the actual exception-entry
+builder/fixup/validation functions, the architecture exception dispatch and the
+actual verifier guard generation statements. Source SHA256s and results are
+saved in TEST_OUTPUT; generated files never enter the source tree.
+
+Tests exercise all 31 possible destination-register slots and four load widths,
+PC advance/zero destination with flags/SP unchanged, invalid table/count/range
+handling and ordinary non-BPF exception behavior. A small instruction interpreter
+checks the real generated guard over user/kernel/effective-offset/wrap/alias cases.
+
+These are host fixtures with kernel-interface stubs, not generated ARM64 machine
+code execution or induced kernel data aborts. Full kernel compilation, actual
+Android BPF loading, accounting/lifetime stress and recovery tests remain required.
