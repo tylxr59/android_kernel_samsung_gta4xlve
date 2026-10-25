@@ -7,11 +7,25 @@
 #include <linux/kernel.h>
 #include <linux/seq_file.h>
 
+/* Legacy bpf_seq_read stops at the caller's read limit. Keep the next
+ * unconsumed buffer alive until the following read, or the iterator closes.
+ */
+struct dmabuf_iter_seq_info {
+	struct dma_buf *resume;
+	bool started;
+};
+
 static void *dmabuf_iter_seq_start(struct seq_file *seq, loff_t *pos)
 {
-	if (*pos)
-		return NULL;
+	struct dmabuf_iter_seq_info *info = seq->private;
+	struct dma_buf *buf = info->resume;
 
+	info->resume = NULL;
+	if (buf)
+		return buf;
+	if (info->started)
+		return NULL;
+	info->started = true;
 	return dma_buf_iter_begin();
 }
 
@@ -53,10 +67,20 @@ static int dmabuf_iter_seq_show(struct seq_file *seq, void *v)
 
 static void dmabuf_iter_seq_stop(struct seq_file *seq, void *v)
 {
-	struct dma_buf *dmabuf = v;
+	struct dmabuf_iter_seq_info *info = seq->private;
 
-	if (dmabuf)
-		dma_buf_put(dmabuf);
+	if (v)
+		info->resume = v;
+	else
+		(void)__dmabuf_seq_show(seq, NULL, true);
+}
+
+static void dmabuf_iter_seq_fini(void *private)
+{
+	struct dmabuf_iter_seq_info *info = private;
+
+	if (info->resume)
+		dma_buf_put(info->resume);
 }
 
 static const struct seq_operations dmabuf_iter_seq_ops = {
@@ -75,8 +99,8 @@ static void bpf_iter_dmabuf_show_fdinfo(const struct bpf_iter_aux_info *aux,
 static const struct bpf_iter_seq_info dmabuf_iter_seq_info = {
 	.seq_ops		= &dmabuf_iter_seq_ops,
 	.init_seq_private	= NULL,
-	.fini_seq_private	= NULL,
-	.seq_priv_size		= 0,
+	.fini_seq_private	= dmabuf_iter_seq_fini,
+	.seq_priv_size		= sizeof(struct dmabuf_iter_seq_info),
 };
 
 static struct bpf_iter_reg bpf_dmabuf_reg_info = {
