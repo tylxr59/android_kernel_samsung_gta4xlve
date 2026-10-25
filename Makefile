@@ -1239,6 +1239,17 @@ cmd_link-vmlinux =                                                 \
 vmlinux: scripts/link-vmlinux.sh vmlinux_prereq $(vmlinux-deps) FORCE
 	+$(call if_changed,link-vmlinux)
 
+# BTF is opt-in on this legacy tree. Build its native ID resolver before link.
+ifeq ($(CONFIG_DEBUG_INFO_BTF),y)
+BTF_LIBBPF_SRC ?= $(abspath $(srctree)/../../../external/libbpf)
+vmlinux: $(RESOLVE_BTFIDS)
+$(RESOLVE_BTFIDS): FORCE
+	$(Q)$(MAKE) -C $(srctree)/tools/bpf/resolve_btfids \
+		srctree=$(abspath $(srctree)) OUTPUT=$(dir $(abspath $(RESOLVE_BTFIDS))) \
+		LIBBPF_SRC=$(BTF_LIBBPF_SRC) HOSTCC="$(HOSTCC)"
+endif
+
+
 # Build samples along the rest of the kernel
 ifdef CONFIG_SAMPLES
 vmlinux-dirs += samples

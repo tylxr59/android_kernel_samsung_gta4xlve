@@ -202,7 +202,16 @@ gen_btf()
 
 	info "BTF" ${2}
 	vmlinux_link ${1}
-	LLVM_OBJCOPY=${OBJCOPY} ${PAHOLE} -J ${1}
+	# This tree's BTF validator accepts kinds 1..15. Newer pahole releases
+	# otherwise emit tags/enum64 that this kernel cannot consume.
+	local pahole_flags=""
+	local flag
+	for flag in skip_encoding_btf_decl_tag skip_encoding_btf_type_tag skip_encoding_btf_enum64; do
+		if ${PAHOLE} --help | grep -q -- "--${flag}"; then
+			pahole_flags="${pahole_flags} --${flag}"
+		fi
+	done
+	LLVM_OBJCOPY=${OBJCOPY} ${PAHOLE} ${pahole_flags} -J ${1}
 
 	# Create ${2} which contains just .BTF section but no symbols. Add
 	# SHF_ALLOC because .BTF will be part of the vmlinux image. --strip-all

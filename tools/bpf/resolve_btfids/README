@@ -1,0 +1,25 @@
+Legacy-tree BTF host tool
+=========================
+
+main.c derives from Linux v5.10 tools/bpf/resolve_btfids/main.c. Adaptations:
+- use the manifest-pinned Android external/libbpf API (btf__type_cnt);
+- use calloc instead of the absent linux/zalloc.h helper;
+- count each requested symbol once even when BTF has duplicate type names;
+- report negative libbpf errors with the correct strerror sign.
+
+The kernel's inherited BTF linker hook referenced this tool without carrying its
+sources/build rule. CONFIG_DEBUG_INFO_BTF now builds it before linking vmlinux.
+The standalone Makefile builds native libbpf and libsubcmd archives in OUTPUT.
+It needs native C tools, libelf/zlib development headers, and LIBBPF_SRC pointing
+to the pinned Android external/libbpf checkout. It does not fetch dependencies.
+The kernel source layout supplies the normal default; isolated worktrees must
+pass BTF_LIBBPF_SRC to kernel make. No target sysroot/linker flags are reused.
+
+With the host tool built, run tests/run.sh with RESOLVE_BTFIDS, TEST_OUTPUT,
+PAHOLE and LLVM_OBJCOPY set to absolute paths. The duplicate-name fixture contains
+three translation units: two different layouts sharing a struct name, followed
+by a unique struct. The previous counting implementation stopped before finding
+that final type. A separate negative fixture checks that missing BTF fails.
+
+DMA-BUF iterator enablement is separate and opt-in. Building BTF or this tool
+does not establish Android CO-RE loader compatibility or successful boot.
