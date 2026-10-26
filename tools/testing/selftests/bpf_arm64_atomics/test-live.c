@@ -8,6 +8,7 @@
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <pthread.h>
 #define RAW(c,d,s,o,i) ((struct bpf_insn){.code=c,.dst_reg=d,.src_reg=s,.off=o,.imm=i})
 #define MOV(d,i) RAW(BPF_ALU64|BPF_MOV|BPF_K,d,0,0,i)
 #define LOAD(sz,d,s,o) RAW(BPF_LDX|BPF_MEM|sz,d,s,o,0)
@@ -23,6 +24,39 @@ static int run(int fd) {
  unsigned char in[64]={0},out[128]={0};union bpf_attr a={0};a.test.prog_fd=fd;
  a.test.data_in=(uintptr_t)in;a.test.data_size_in=sizeof(in);a.test.data_out=(uintptr_t)out;a.test.data_size_out=sizeof(out);a.test.repeat=1;
  if(bpfcall(BPF_PROG_TEST_RUN,&a))return -1;return a.test.retval;
+}
+enum { THREADS=4, PER_THREAD=256, TOTAL=THREADS*PER_THREAD };
+static pthread_mutex_t seen_lock=PTHREAD_MUTEX_INITIALIZER;
+static unsigned char seen[TOTAL];
+struct worker { int fd,failed; };
+static void *increment(void *arg){
+ struct worker *w=arg;
+ for(int i=0;i<PER_THREAD;i++){
+  int value=run(w->fd);
+  pthread_mutex_lock(&seen_lock);
+  if(value<0||value>=TOTAL||seen[value])w->failed=1;else seen[value]=1;
+  pthread_mutex_unlock(&seen_lock);
+ }
+ return NULL;
+}
+static int concurrent_fetch(void){
+ union bpf_attr a={0};a.map_type=BPF_MAP_TYPE_ARRAY;a.key_size=4;a.value_size=8;a.max_entries=1;
+ int map=bpfcall(BPF_MAP_CREATE,&a);if(map<0){perror("test map create");return 1;}
+ struct bpf_insn p[]={STORE(BPF_W,10,-4,0),RAW(BPF_ALU64|BPF_MOV|BPF_X,2,10,0,0),RAW(BPF_ALU64|BPF_ADD|BPF_K,2,0,0,-4),RAW(BPF_LD|BPF_DW|BPF_IMM,1,BPF_PSEUDO_MAP_FD,0,map),RAW(0,0,0,0,0),RAW(BPF_JMP|BPF_CALL,0,0,0,BPF_FUNC_map_lookup_elem),RAW(BPF_JMP|BPF_JEQ|BPF_K,0,0,4,0),MOV(1,1),RAW(BPF_STX|BPF_ATOMIC|BPF_DW,0,1,0,BPF_ADD|BPF_FETCH),RAW(BPF_ALU64|BPF_MOV|BPF_X,0,1,0,0),EXIT(),MOV(0,-1),EXIT()};
+ char log[32768]={0};int fd=load(p,sizeof(p)/sizeof(p[0]),log);
+ if(fd<0){fprintf(stderr,"concurrent load failed: %s\n%s\n",strerror(errno),log);close(map);return 1;}
+ pthread_t threads[THREADS];struct worker workers[THREADS];int started=0,failed=0;
+ for(int i=0;i<THREADS;i++){
+  workers[i]=(struct worker){.fd=fd};
+  if(pthread_create(&threads[i],NULL,increment,&workers[i])){failed=1;break;}started++;
+ }
+ for(int i=0;i<started;i++){pthread_join(threads[i],NULL);failed|=workers[i].failed;}
+ uint32_t key=0;uint64_t value=0;memset(&a,0,sizeof(a));a.map_fd=map;a.key=(uintptr_t)&key;a.value=(uintptr_t)&value;
+ if(bpfcall(BPF_MAP_LOOKUP_ELEM,&a)||value!=TOTAL)failed=1;
+ for(int i=0;i<TOTAL;i++)if(!seen[i])failed=1;
+ close(fd);close(map);
+ if(failed){fprintf(stderr,"concurrent fetch check failed (count=%llu)\n",(unsigned long long)value);return 1;}
+ printf("PASS: %d concurrent atomic increments, every old value returned exactly once\n",TOTAL);return 0;
 }
 int main(void) {
  if(getuid()!=0){fputs("Run only during authorized rooted diagnostics\n",stderr);return 2;}
@@ -43,5 +77,5 @@ int main(void) {
   memset(log,0,sizeof(log));int fd=load(p,sizeof(p)/sizeof(p[0]),log);
   if(fd>=0){close(fd);fprintf(stderr,"invalid atomic accepted: %d\n",bad);return 1;}passed++;
  }
- printf("PASS: %d bounded live atomic execution/rejection cases\n",passed);return 0;
+ printf("PASS: %d bounded live atomic execution/rejection cases\n",passed);return concurrent_fetch();
 }
