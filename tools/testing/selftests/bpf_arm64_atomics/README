@@ -19,6 +19,7 @@ The companion test-live.c is a bounded native diagnostic for authorized rooted
 Android tests. It loads unattached socket filters, runs each once using
 BPF_PROG_TEST_RUN and closes every descriptor. It checks 40 arithmetic/fetch/
 exchange/compare-exchange executions plus invalid opcode, unaligned address and
-invalid-width rejection. It creates no maps, pins or persistent attachments.
+invalid-width rejection. It also performs1,024 concurrent map increments and checks unique old values.
+The temporary map and program descriptors are closed; no pins or attachments persist.
 It does not replace concurrent-operation or unprivileged-policy testing.
 Compile against the Android Bionic/UAPI headers; do not bundle it in the ROM.

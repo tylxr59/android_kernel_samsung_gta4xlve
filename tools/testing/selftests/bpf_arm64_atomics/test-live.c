@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
-/* Bounded, unattached socket-filter tests. No maps, pins or persistent hooks. */
+/* Bounded, unattached socket-filter tests. Temporary maps; no pins or hooks. */
 #include <linux/bpf.h>
 #include <sys/syscall.h>
 #include <unistd.h>
@@ -9,10 +9,10 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <pthread.h>
-#define RAW(c,d,s,o,i) ((struct bpf_insn){.code=c,.dst_reg=d,.src_reg=s,.off=o,.imm=i})
+#define RAW(c,d,s,o,i) ((struct bpf_insn){.code=(c),.dst_reg=(d),.src_reg=(s),.off=(o),.imm=(i)})
 #define MOV(d,i) RAW(BPF_ALU64|BPF_MOV|BPF_K,d,0,0,i)
-#define LOAD(sz,d,s,o) RAW(BPF_LDX|BPF_MEM|sz,d,s,o,0)
-#define STORE(sz,d,o,i) RAW(BPF_ST|BPF_MEM|sz,d,0,o,i)
+#define LOAD(sz,d,s,o) RAW(BPF_LDX|BPF_MEM|(sz),d,s,o,0)
+#define STORE(sz,d,o,i) RAW(BPF_ST|BPF_MEM|(sz),d,0,o,i)
 #define EXIT() RAW(BPF_JMP|BPF_EXIT,0,0,0,0)
 static int bpfcall(int command,union bpf_attr *a) { return syscall(__NR_bpf,command,a,sizeof(*a)); }
 static int load(struct bpf_insn *insns,int count,char *log) {
