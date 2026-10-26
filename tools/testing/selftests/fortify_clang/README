@@ -1,0 +1,9 @@
+Host checks for the actual legacy FORTIFY wrappers
+=================================================
+TEST_OUTPUT=/absolute/output TEST_CLANG=/path/to/clang python3 tools/testing/selftests/fortify_clang/run-host.py
+
+Requires native Clang13+ and GCC. Extracts the actual string.h wrappers and
+checks valid operations, compile-time source/destination overflow rejection and
+a dynamic memset overflow trap in a subprocess. No kernel panic is induced.
+This tests a native host fixture with libc aliases and simplified kernel macros;
+full target compilation and normal hardware operation still require validation.
