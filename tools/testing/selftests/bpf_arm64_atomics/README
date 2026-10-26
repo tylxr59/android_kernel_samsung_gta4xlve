@@ -1,0 +1,16 @@
+Host semantic checks for the ARM64 BPF atomic emitter
+===================================================
+Run with TEST_OUTPUT pointing outside the kernel source tree:
+  TEST_OUTPUT=/absolute/output python3 tools/testing/selftests/bpf_arm64_atomics/run-host.py
+
+Requires GCC and AddressSanitizer/UndefinedBehaviorSanitizer. The runner extracts
+actual LL/SC emission code and register mapping. A small instruction-semantics
+model checks 21,840 combinations of 32/64-bit arithmetic/bitwise/fetch/exchange/
+compare-exchange, positive/negative/zero offsets, source/destination registers,
+comparison success/failure and a failed store-exclusive retry. It verifies old
+value returns, updated memory, zero extension and preserved BPF registers.
+
+This does not execute ARM64 machine code or the kernel verifier. It does not
+validate real concurrency, instruction encodings or LSE operations (the target
+configuration disables LSE). Full kernel build and live verifier/atomic/network/
+accounting tests remain necessary. Source hash and sanitizer result are retained.
