@@ -1,0 +1,8 @@
+Bounded filesystem protection smoke test
+=======================================
+Compile test-live.c against Android Bionic headers. Run only during authorized
+rooted diagnostics after checking the four protected_* sysctl values. Creates a
+new owned temporary directory, drops child UIDs/groups to test cross-owner link,
+FIFO and regular-file protection in world/group-sticky directories, checks DAC
+controls, then removes the fixture. Never reuses an existing directory. Does not
+change sysctls, touch other files or provide an app-SELinux security test.
