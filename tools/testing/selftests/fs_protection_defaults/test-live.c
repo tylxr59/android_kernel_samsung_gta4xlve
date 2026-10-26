@@ -3,6 +3,8 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <sys/types.h>
+#include <sys/syscall.h>
+#include <linux/capability.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <grp.h>
@@ -16,6 +18,9 @@ static int make_file(const char *name,int mode) {
 }
 static int child_test(int which) {
  if(setgroups(0,NULL)||setgid(65534)||setuid(65534))return 3;
+ struct __user_cap_header_struct header={.version=_LINUX_CAPABILITY_VERSION_3};
+ struct __user_cap_data_struct caps[2]={{0}};
+ if(syscall(__NR_capget,&header,caps)||caps[0].effective||caps[1].effective)return 3;
  int fd,rc,denied;
  /* Direct reads/ordinary writes prove directory/file DAC permits the control. */
  fd=open("regular",O_RDONLY);if(fd<0)return 4;close(fd);
