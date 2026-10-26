@@ -232,7 +232,13 @@ static inline const char *kbasename(const char *path)
 	return tail ? tail + 1 : path;
 }
 
+#ifdef __clang__
+#define __FORTIFY_INLINE extern __always_inline __attribute__((gnu_inline, overloadable))
+#define __FORTIFY_POS __attribute__((pass_object_size(0)))
+#else
 #define __FORTIFY_INLINE extern __always_inline __attribute__((gnu_inline))
+#define __FORTIFY_POS
+#endif
 #define __RENAME(x) __asm__(#x)
 
 void fortify_panic(const char *name) __noreturn __cold;
@@ -267,7 +273,7 @@ extern char *__underlying_strncpy(char *p, const char *q, __kernel_size_t size) 
 #define __underlying_strncpy	__builtin_strncpy
 #endif
 
-__FORTIFY_INLINE char *strncpy(char *p, const char *q, __kernel_size_t size)
+__FORTIFY_INLINE char *strncpy(char * const __FORTIFY_POS p, const char *q, __kernel_size_t size)
 {
 	size_t p_size = __builtin_object_size(p, 0);
 	if (__builtin_constant_p(size) && p_size < size)
@@ -277,7 +283,7 @@ __FORTIFY_INLINE char *strncpy(char *p, const char *q, __kernel_size_t size)
 	return __underlying_strncpy(p, q, size);
 }
 
-__FORTIFY_INLINE char *strcat(char *p, const char *q)
+__FORTIFY_INLINE char *strcat(char * const __FORTIFY_POS p, const char *q)
 {
 	size_t p_size = __builtin_object_size(p, 0);
 	if (p_size == (size_t)-1)
@@ -287,7 +293,7 @@ __FORTIFY_INLINE char *strcat(char *p, const char *q)
 	return p;
 }
 
-__FORTIFY_INLINE __kernel_size_t strlen(const char *p)
+__FORTIFY_INLINE __kernel_size_t strlen(const char * const __FORTIFY_POS p)
 {
 	__kernel_size_t ret;
 	size_t p_size = __builtin_object_size(p, 0);
@@ -303,7 +309,7 @@ __FORTIFY_INLINE __kernel_size_t strlen(const char *p)
 }
 
 extern __kernel_size_t __real_strnlen(const char *, __kernel_size_t) __RENAME(strnlen);
-__FORTIFY_INLINE __kernel_size_t strnlen(const char *p, __kernel_size_t maxlen)
+__FORTIFY_INLINE __kernel_size_t strnlen(const char * const __FORTIFY_POS p, __kernel_size_t maxlen)
 {
 	size_t p_size = __builtin_object_size(p, 0);
 	__kernel_size_t ret = __real_strnlen(p, maxlen < p_size ? maxlen : p_size);
@@ -314,7 +320,7 @@ __FORTIFY_INLINE __kernel_size_t strnlen(const char *p, __kernel_size_t maxlen)
 
 /* defined after fortified strlen to reuse it */
 extern size_t __real_strlcpy(char *, const char *, size_t) __RENAME(strlcpy);
-__FORTIFY_INLINE size_t strlcpy(char *p, const char *q, size_t size)
+__FORTIFY_INLINE size_t strlcpy(char * const __FORTIFY_POS p, const char * const __FORTIFY_POS q, size_t size)
 {
 	size_t ret;
 	size_t p_size = __builtin_object_size(p, 0);
@@ -335,7 +341,7 @@ __FORTIFY_INLINE size_t strlcpy(char *p, const char *q, size_t size)
 }
 
 /* defined after fortified strlen and strnlen to reuse them */
-__FORTIFY_INLINE char *strncat(char *p, const char *q, __kernel_size_t count)
+__FORTIFY_INLINE char *strncat(char * const __FORTIFY_POS p, const char * const __FORTIFY_POS q, __kernel_size_t count)
 {
 	size_t p_len, copy_len;
 	size_t p_size = __builtin_object_size(p, 0);
@@ -351,7 +357,7 @@ __FORTIFY_INLINE char *strncat(char *p, const char *q, __kernel_size_t count)
 	return p;
 }
 
-__FORTIFY_INLINE void *memset(void *p, int c, __kernel_size_t size)
+__FORTIFY_INLINE void *memset(void * const __FORTIFY_POS p, int c, __kernel_size_t size)
 {
 	size_t p_size = __builtin_object_size(p, 0);
 	if (__builtin_constant_p(size) && p_size < size)
@@ -361,7 +367,7 @@ __FORTIFY_INLINE void *memset(void *p, int c, __kernel_size_t size)
 	return __underlying_memset(p, c, size);
 }
 
-__FORTIFY_INLINE void *memcpy(void *p, const void *q, __kernel_size_t size)
+__FORTIFY_INLINE void *memcpy(void * const __FORTIFY_POS p, const void * const __FORTIFY_POS q, __kernel_size_t size)
 {
 	size_t p_size = __builtin_object_size(p, 0);
 	size_t q_size = __builtin_object_size(q, 0);
@@ -376,7 +382,7 @@ __FORTIFY_INLINE void *memcpy(void *p, const void *q, __kernel_size_t size)
 	return __underlying_memcpy(p, q, size);
 }
 
-__FORTIFY_INLINE void *memmove(void *p, const void *q, __kernel_size_t size)
+__FORTIFY_INLINE void *memmove(void * const __FORTIFY_POS p, const void * const __FORTIFY_POS q, __kernel_size_t size)
 {
 	size_t p_size = __builtin_object_size(p, 0);
 	size_t q_size = __builtin_object_size(q, 0);
@@ -392,7 +398,7 @@ __FORTIFY_INLINE void *memmove(void *p, const void *q, __kernel_size_t size)
 }
 
 extern void *__real_memscan(void *, int, __kernel_size_t) __RENAME(memscan);
-__FORTIFY_INLINE void *memscan(void *p, int c, __kernel_size_t size)
+__FORTIFY_INLINE void *memscan(void * const __FORTIFY_POS p, int c, __kernel_size_t size)
 {
 	size_t p_size = __builtin_object_size(p, 0);
 	if (__builtin_constant_p(size) && p_size < size)
@@ -402,7 +408,7 @@ __FORTIFY_INLINE void *memscan(void *p, int c, __kernel_size_t size)
 	return __real_memscan(p, c, size);
 }
 
-__FORTIFY_INLINE int memcmp(const void *p, const void *q, __kernel_size_t size)
+__FORTIFY_INLINE int memcmp(const void * const __FORTIFY_POS p, const void * const __FORTIFY_POS q, __kernel_size_t size)
 {
 	size_t p_size = __builtin_object_size(p, 0);
 	size_t q_size = __builtin_object_size(q, 0);
@@ -417,7 +423,7 @@ __FORTIFY_INLINE int memcmp(const void *p, const void *q, __kernel_size_t size)
 	return __underlying_memcmp(p, q, size);
 }
 
-__FORTIFY_INLINE void *memchr(const void *p, int c, __kernel_size_t size)
+__FORTIFY_INLINE void *memchr(const void * const __FORTIFY_POS p, int c, __kernel_size_t size)
 {
 	size_t p_size = __builtin_object_size(p, 0);
 	if (__builtin_constant_p(size) && p_size < size)
@@ -428,7 +434,7 @@ __FORTIFY_INLINE void *memchr(const void *p, int c, __kernel_size_t size)
 }
 
 void *__real_memchr_inv(const void *s, int c, size_t n) __RENAME(memchr_inv);
-__FORTIFY_INLINE void *memchr_inv(const void *p, int c, size_t size)
+__FORTIFY_INLINE void *memchr_inv(const void * const __FORTIFY_POS p, int c, size_t size)
 {
 	size_t p_size = __builtin_object_size(p, 0);
 	if (__builtin_constant_p(size) && p_size < size)
@@ -439,7 +445,7 @@ __FORTIFY_INLINE void *memchr_inv(const void *p, int c, size_t size)
 }
 
 extern void *__real_kmemdup(const void *src, size_t len, gfp_t gfp) __RENAME(kmemdup);
-__FORTIFY_INLINE void *kmemdup(const void *p, size_t size, gfp_t gfp)
+__FORTIFY_INLINE void *kmemdup(const void * const __FORTIFY_POS p, size_t size, gfp_t gfp)
 {
 	size_t p_size = __builtin_object_size(p, 0);
 	if (__builtin_constant_p(size) && p_size < size)
@@ -450,7 +456,7 @@ __FORTIFY_INLINE void *kmemdup(const void *p, size_t size, gfp_t gfp)
 }
 
 /* defined after fortified strlen and memcpy to reuse them */
-__FORTIFY_INLINE char *strcpy(char *p, const char *q)
+__FORTIFY_INLINE char *strcpy(char * const __FORTIFY_POS p, const char * const __FORTIFY_POS q)
 {
 	size_t p_size = __builtin_object_size(p, 0);
 	size_t q_size = __builtin_object_size(q, 0);
@@ -472,6 +478,7 @@ __FORTIFY_INLINE char *strcpy(char *p, const char *q)
 #undef __underlying_strncat
 #undef __underlying_strncpy
 #endif
+#undef __FORTIFY_POS
 
 /**
  * memcpy_and_pad - Copy one buffer to another with padding

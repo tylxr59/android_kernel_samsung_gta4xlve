@@ -564,6 +564,7 @@ endif
 # Export real tool identification to the legacy Kconfig parser. Its environment
 # dependencies trigger configuration regeneration when the selected tools change.
 export KCONFIG_CC_IS_CLANG := $(shell $(CC) --version 2>/dev/null | grep -q 'clang version' && echo y || echo n)
+export KCONFIG_CC_HAS_CLANG_FORTIFY := $(shell $(CONFIG_SHELL) $(srctree)/scripts/clang-fortify-check.sh $(CC) 2>/dev/null)
 export KCONFIG_AS_IS_LLVM := $(shell $(CC) $(CLANG_FLAGS) -\#\#\# -x assembler -c /dev/null 2>&1 | grep -q -- '-cc1as' && echo y || echo n)
 export KCONFIG_LD_IS_LLD := $(shell $(LD) --version 2>/dev/null | grep -q 'LLD' && echo y || echo n)
 

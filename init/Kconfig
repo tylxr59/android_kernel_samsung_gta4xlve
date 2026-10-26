@@ -8,6 +8,13 @@ config TOOLCHAIN_CC_IS_CLANG
 config CC_IS_CLANG
 	def_bool TOOLCHAIN_CC_IS_CLANG = "y"
 
+config TOOLCHAIN_CC_HAS_CLANG_FORTIFY
+	string
+	option env="KCONFIG_CC_HAS_CLANG_FORTIFY"
+
+config CC_HAS_CLANG_FORTIFY
+	def_bool TOOLCHAIN_CC_HAS_CLANG_FORTIFY = "y"
+
 config TOOLCHAIN_AS_IS_LLVM
 	string
 	option env="KCONFIG_AS_IS_LLVM"
