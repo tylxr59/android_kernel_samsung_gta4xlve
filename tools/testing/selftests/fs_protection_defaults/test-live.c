@@ -34,15 +34,16 @@ static int child_test(int which) {
 }
 int main(void){
  if(getuid()!=0){fputs("Requires authorized rooted diagnostics\n",stderr);return 2;}
- umask(0);if(mkdir(base,01777)){perror("fixture mkdir (will not reuse existing path)");return 2;}
+ umask(0);if(mkdir(base,0700)){perror("fixture mkdir (will not reuse existing path)");return 2;}
  if(chdir(base)){rmdir(base);return 2;}
  int rc=2;
- if(make_file("regular",0666)||make_file("readonly",0644)||mkfifo("fifo",0666)||symlink("readonly","link")||mkdir("group",01770))goto done;
+ if(make_file("regular",0666)||make_file("readonly",0644)||mkfifo("fifo",0666)||symlink("readonly","link")||mkdir("group",0700))goto done;
  if(chown("regular",2000,2000)||chown("readonly",2000,2000)||chown("fifo",2000,2000)||lchown("link",2000,2000)||chown("group",0,65534))goto done;
  if(make_file("group/regular",0666)||mkfifo("group/fifo",0666)||chown("group/regular",2000,2000)||chown("group/fifo",2000,2000))goto done;
+ if(chmod("group",01770)||chmod(".",01777))goto done;
  rc=0;
  for(int which=0;which<6;which++){
-  pid_t p=fork();if(p<0){rc=2;break;}if(!p)_Exit(child_test(which));int status;
+  pid_t p=fork();if(p<0){rc=2;break;}if(!p)_Exit(child_test(which));int status=0;
   if(waitpid(p,&status,0)!=p||!WIFEXITED(status)||WEXITSTATUS(status)){fprintf(stderr,"FAIL: protection case %d status=%d\n",which,status);rc=1;break;}
  }
  if(!rc)puts("PASS: link, FIFO and regular-file protections; world/group-sticky cases and DAC controls");
