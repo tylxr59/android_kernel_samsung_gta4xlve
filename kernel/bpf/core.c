@@ -1687,6 +1687,33 @@ out:
 				(u32) SRC,
 				(atomic_t *)(unsigned long) (DST + insn->off));
 			break;
+		case BPF_AND:
+			atomic_and((u32) SRC,
+				(atomic_t *)(unsigned long) (DST + insn->off));
+			break;
+		case BPF_AND | BPF_FETCH:
+			SRC = (u32) atomic_fetch_and(
+				(u32) SRC,
+				(atomic_t *)(unsigned long) (DST + insn->off));
+			break;
+		case BPF_OR:
+			atomic_or((u32) SRC,
+				(atomic_t *)(unsigned long) (DST + insn->off));
+			break;
+		case BPF_OR | BPF_FETCH:
+			SRC = (u32) atomic_fetch_or(
+				(u32) SRC,
+				(atomic_t *)(unsigned long) (DST + insn->off));
+			break;
+		case BPF_XOR:
+			atomic_xor((u32) SRC,
+				(atomic_t *)(unsigned long) (DST + insn->off));
+			break;
+		case BPF_XOR | BPF_FETCH:
+			SRC = (u32) atomic_fetch_xor(
+				(u32) SRC,
+				(atomic_t *)(unsigned long) (DST + insn->off));
+			break;
 		case BPF_XCHG:
 			SRC = (u32) atomic_xchg(
 				(atomic_t *)(unsigned long) (DST + insn->off),
@@ -1711,6 +1738,33 @@ out:
 			break;
 		case BPF_ADD | BPF_FETCH:
 			SRC = (u64) atomic64_fetch_add(
+				(u64) SRC,
+				(atomic64_t *)(unsigned long) (DST + insn->off));
+			break;
+		case BPF_AND:
+			atomic64_and((u64) SRC,
+				(atomic64_t *)(unsigned long) (DST + insn->off));
+			break;
+		case BPF_AND | BPF_FETCH:
+			SRC = (u64) atomic64_fetch_and(
+				(u64) SRC,
+				(atomic64_t *)(unsigned long) (DST + insn->off));
+			break;
+		case BPF_OR:
+			atomic64_or((u64) SRC,
+				(atomic64_t *)(unsigned long) (DST + insn->off));
+			break;
+		case BPF_OR | BPF_FETCH:
+			SRC = (u64) atomic64_fetch_or(
+				(u64) SRC,
+				(atomic64_t *)(unsigned long) (DST + insn->off));
+			break;
+		case BPF_XOR:
+			atomic64_xor((u64) SRC,
+				(atomic64_t *)(unsigned long) (DST + insn->off));
+			break;
+		case BPF_XOR | BPF_FETCH:
+			SRC = (u64) atomic64_fetch_xor(
 				(u64) SRC,
 				(atomic64_t *)(unsigned long) (DST + insn->off));
 			break;
