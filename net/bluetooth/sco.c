@@ -96,10 +96,10 @@ static void sco_sock_timeout(struct work_struct *work)
 
 	BT_DBG("sock %p state %d", sk, sk->sk_state);
 
-	bh_lock_sock(sk);
+	lock_sock(sk);
 	sk->sk_err = ETIMEDOUT;
 	sk->sk_state_change(sk);
-	bh_unlock_sock(sk);
+	release_sock(sk);
 
 	sock_put(sk);
 }
@@ -192,14 +192,15 @@ static void sco_conn_del(struct hci_conn *hcon, int err)
 	/* Kill socket */
 	sco_conn_lock(conn);
 	sk = conn->sk;
+	if (sk)
+		sock_hold(sk);
 	sco_conn_unlock(conn);
 
 	if (sk) {
-		sock_hold(sk);
-		bh_lock_sock(sk);
+		lock_sock(sk);
 		sco_sock_clear_timer(sk);
 		sco_chan_del(sk, err);
-		bh_unlock_sock(sk);
+		release_sock(sk);
 		sock_put(sk);
 	}
 
@@ -360,9 +361,13 @@ static struct sock *sco_get_sock_listen(bdaddr_t *src)
 			sk1 = sk;
 	}
 
+	sk = sk ? sk : sk1;
+	if (sk)
+		sock_hold(sk);
+
 	read_unlock(&sco_sk_list.lock);
 
-	return sk ? sk : sk1;
+	return sk;
 }
 
 static void sco_sock_destruct(struct sock *sk)
@@ -398,6 +403,15 @@ static void sco_sock_kill(struct sock *sk)
 		return;
 
 	BT_DBG("sk %p state %d", sk, sk->sk_state);
+
+	/* Exclude reference acquisition through a dying connection. */
+	lock_sock(sk);
+	if (sco_pi(sk)->conn) {
+		sco_conn_lock(sco_pi(sk)->conn);
+		sco_pi(sk)->conn->sk = NULL;
+		sco_conn_unlock(sco_pi(sk)->conn);
+	}
+	release_sock(sk);
 
 	/* Kill poor orphan */
 	bt_sock_unlink(&sco_sk_list, sk);
@@ -1046,40 +1060,48 @@ static int sco_sock_release(struct socket *sock)
 
 static void sco_conn_ready(struct sco_conn *conn)
 {
-	struct sock *parent;
-	struct sock *sk = conn->sk;
+	struct sock *parent, *sk;
+
+	sco_conn_lock(conn);
+	sk = conn->sk;
+	if (sk)
+		sock_hold(sk);
+	sco_conn_unlock(conn);
 
 	BT_DBG("conn %p", conn);
 
 	if (sk) {
-		sco_sock_clear_timer(sk);
-		bh_lock_sock(sk);
-		sk->sk_state = BT_CONNECTED;
-		sk->sk_state_change(sk);
-		bh_unlock_sock(sk);
+		lock_sock(sk);
+
+		/* Socket close can clear conn->sk while we acquire the lock. */
+		if (conn->sk) {
+			sco_sock_clear_timer(sk);
+			sk->sk_state = BT_CONNECTED;
+			sk->sk_state_change(sk);
+		}
+
+		release_sock(sk);
+		sock_put(sk);
 	} else {
+		if (!conn->hcon)
+			return;
+
+		/* Connect confirmations are serialized by hdev->lock. */
+		parent = sco_get_sock_listen(&conn->hcon->src);
+		if (!parent)
+			return;
+
+		/* Never take the sleeping socket lock under conn->lock. */
+		lock_sock(parent);
 		sco_conn_lock(conn);
 
-		if (!conn->hcon) {
-			sco_conn_unlock(conn);
-			return;
-		}
-
-		parent = sco_get_sock_listen(&conn->hcon->src);
-		if (!parent) {
-			sco_conn_unlock(conn);
-			return;
-		}
-
-		bh_lock_sock(parent);
+		if (parent->sk_state != BT_LISTEN)
+			goto release;
 
 		sk = sco_sock_alloc(sock_net(parent), NULL,
 				    BTPROTO_SCO, GFP_ATOMIC, 0);
-		if (!sk) {
-			bh_unlock_sock(parent);
-			sco_conn_unlock(conn);
-			return;
-		}
+		if (!sk)
+			goto release;
 
 		sco_sock_init(sk, parent);
 
@@ -1094,12 +1116,12 @@ static void sco_conn_ready(struct sco_conn *conn)
 		else
 			sk->sk_state = BT_CONNECTED;
 
-		/* Wake up parent */
 		parent->sk_data_ready(parent);
 
-		bh_unlock_sock(parent);
-
+release:
 		sco_conn_unlock(conn);
+		release_sock(parent);
+		sock_put(parent);
 	}
 }
 
