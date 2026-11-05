@@ -182,8 +182,3 @@
 	reg = <0x0 0x9C9E4000 0x0 0x0100000>; //0x9C9E4000 is 0x9c000000 + 0x9E4000
 	label = "dfps_data_region";
 };
-
-&disp_rdump_memory {
-	reg = <0x0 0x9c000000 0x0 0x9E4000>; //0x9E4000 is roundup(1080 * 2400 * 4, 4K)
-	label = "disp_rdump_region";
-};
