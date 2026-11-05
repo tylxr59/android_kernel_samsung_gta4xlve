@@ -1307,6 +1307,8 @@ struct sighand_struct *__lock_task_sighand(struct task_struct *tsk,
 		rcu_read_lock();
 		sighand = rcu_dereference(tsk->sighand);
 		if (unlikely(sighand == NULL)) {
+			/* Pair with the release store in __exit_signal(). */
+			smp_acquire__after_ctrl_dep();
 			rcu_read_unlock();
 			local_irq_restore(*flags);
 			break;
