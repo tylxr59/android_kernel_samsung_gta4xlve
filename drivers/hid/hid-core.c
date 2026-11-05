@@ -1577,6 +1577,10 @@ int hid_report_raw_event(struct hid_device *hid, int type, u8 *data, u32 size,
 	u8 *cdata = data;
 	int ret = 0;
 
+	/* hid_get_report() reads the report ID from data[0]. */
+	if (report_enum->numbered && size < 1)
+		return -EINVAL;
+
 	report = hid_get_report(report_enum, data);
 	if (!report)
 		goto out;
